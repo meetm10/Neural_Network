@@ -28,10 +28,10 @@ class Network:
             #Initializes them with random normal distributed value between 0-1
             
             #layer_weight = np.zeros((rows,cols))
-            layer_weight = np.random.randn(rows,cols)
+            layer_weight = np.random.randn(rows,cols)*np.sqrt(6.0/(rows+cols))
             self.weights.append(layer_weight)
-            layer_bias = np.random.randn(rows,1)
-            #layer_bias = np.zeros((rows,1))
+            #layer_bias = np.random.randn(rows,1)
+            layer_bias = np.zeros((rows,1))
             self.biases.append(layer_bias)
 
 
@@ -46,23 +46,23 @@ train_data, valid_data, test_data = mnist_loader.load_data_wrapper()
 
 def sigmoid(z):
     
-    return (1.0/(1.0+scipy.special.expit(-z)))
+    return (1.0/(1.0+np.exp(-z)))
 
 
 # In[5]:
 
 
-def feedforward(my_net,X):
+def feedforward(network,X):
     layer_activation_list = []
     weighted_sum_list = []
-    for i in range(1,my_net.layers):
+    for i in range(1,network.layers):
         if i==1:
             a = X
         else:
             a = layer_activation_list[-1]
             
-        weight = my_net.weights[i-1]
-        biases = my_net.biases[i-1]
+        weight = network.weights[i-1]
+        biases = network.biases[i-1]
         z = np.dot(weight,a) + biases
         weighted_sum_list.append(z)
         a = sigmoid(z)
@@ -147,23 +147,39 @@ def errorback(network,last_delta,weighted_list):
 # In[11]:
 
 
-def gradient_descent(network,train_data,valid_data,alpha,epochs):
+def gradient_descent(network,train_data,valid_data,alpha,epochs,batch_size):
     
-    for i in range(epochs):
-        X = train_data[0]
-        target = train_data[1]
+    X = train_data[0]
+    target = train_data[1]
+    alpha = alpha/float(batch_size)
 
-        activation_list, weighted_list = feedforward(my_net,X)
+    for e in range(epochs):
 
-        last_layer_delta = cost_gradient(activation_list[-1],target)*sigmoid_derivative(weighted_list[-1])
+        X_trans = X.transpose()
+        Y_trans = target.transpose()
 
-        final_delta_list = errorback(my_net,last_layer_delta,weighted_list)
-        final_delta_list = final_delta_list[::-1]
+        train_list = [[X_trans[i],Y_trans[i]] for i in range(0,X.shape[1])]
 
-        update_weights(my_net,activation_list,final_delta_list,alpha,X)
+        random.shuffle(train_list)
+
+        for b in range(0,len(train_list),batch_size):
+
+            train_batch = train_list[b:b+batch_size]
+
+            Xbatch = np.array([t[0] for t in train_batch]).transpose()
+            Ybatch = np.array([t[1] for t in train_batch]).transpose() 
+
+            activation_list, weighted_list = feedforward(network,Xbatch)
+
+            last_layer_delta = cost_gradient(activation_list[-1],Ybatch)*sigmoid_derivative(weighted_list[-1])
+
+            final_delta_list = errorback(network,last_layer_delta,weighted_list)
+            final_delta_list = final_delta_list[::-1]
+
+            update_weights(network,activation_list,final_delta_list,alpha,Xbatch)
         
         accuracy = test(network,valid_data)
-        print "Accuracy after Epoch [",i,"]",accuracy
+        print "Accuracy after Epoch [",e,"]",accuracy
         
     return
 
@@ -171,24 +187,17 @@ def gradient_descent(network,train_data,valid_data,alpha,epochs):
 # In[12]:
 
 
-my_net = Network([784, 16, 10])
-#X = train_data[0]
-#activation_list, weighted_list = feedforward(my_net,X)
-#print "Last Activation =",activation_list[-1]
-#target = train_data[1]
-#print target.shape
-#test(activation_list[-1],target)
-#last_layer_delta = cost_gradient(activation_list[-1],target)*sigmoid_derivative(weighted_list[-1])
-#final_delta_list = errorback(my_net,last_layer_delta,weighted_list)
-#print last_layer_delta
+my_net = Network([784, 30, 10])
+
 #temp = test_data[1]
 #print (sum(temp == 0).astype(np.float32))
 #Reverse a list
 #final_delta_list = final_delta_list[::-1]
 #print final_delta_list
-epochs = 200
-alpha = 0.0001
+epochs = 50
+alpha = 0.5
+batch_size = 100
 #update_weights(my_net,activation_list,final_delta_list,alpha,X)
 #print my_net.weights
-gradient_descent(my_net,train_data,valid_data,alpha,epochs)
+gradient_descent(my_net,train_data,valid_data,alpha,epochs,batch_size)
 

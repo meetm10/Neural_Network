@@ -1,9 +1,7 @@
+
 import numpy as np
 import mnist_loader
 import random
-
-#Load training, validation & testing data from MNIST dataset
-train_data, valid_data, test_data = mnist_loader.load_data_wrapper()
 
 #Create a new network
 class Network:
@@ -20,19 +18,22 @@ class Network:
             #Creates a weight numpy array with dimension = dims
             #Initializes them with random normal distributed value between -1 - +1
             
+            #Zero initialization
             #layer_weight = np.zeros((rows,cols))
-            layer_weight = np.random.randn(rows,cols)*np.sqrt(6.0/(rows+cols))
-            self.weights.append(layer_weight)
-            
-            #layer_bias = np.random.randn(rows,1)
             layer_bias = np.zeros((rows,1))
+
+            #Random initialization
+            layer_weight = np.random.randn(rows,cols)*np.sqrt(2.0/(rows+cols))
+            #layer_bias = np.random.randn(rows,1)
+
+            self.weights.append(layer_weight)
             self.biases.append(layer_bias)
 
 #Sigmoid function
 def sigmoid(z):
     return (1.0/(1.0+np.exp(-z)))
 
-#
+#Activations and weighted sums (feedforward)
 def feedforward(network,X):
     layer_activation_list = []
     weighted_sum_list = []
@@ -51,7 +52,7 @@ def feedforward(network,X):
         
     return (layer_activation_list,weighted_sum_list)
 
-#
+#testing network
 def test(network,data):
     
     activation_list,_ = feedforward(network,data[0])
@@ -62,7 +63,7 @@ def test(network,data):
     
     return accuracy
 
-#
+#gradient of cost function
 def cost_gradient(activation,target):
 
     #Quadratic cost gradient
@@ -70,13 +71,14 @@ def cost_gradient(activation,target):
 
     #Cross Entropy cost gradient
     return np.array(np.nan_to_num(-(target/activation)+(1-target)/(1-activation)))
-#
+
+#derivative of sigmoid function
 def sigmoid_derivative(z):
 
     #print "Sigmoid_Derivatives =",sigmoid(z)*(1-sigmoid(z))
     return sigmoid(z)*(1-sigmoid(z))
 
-#
+#update weights of all layers
 def update_weights(network,activation_list,delta_list,alpha,X):
     
     for i in range(network.layers-1):
@@ -114,6 +116,10 @@ def gradient_descent(network,train_data,valid_data,alpha,epochs,batch_size):
     
     X = train_data[0]
     target = train_data[1]
+
+    #Testing for overfitting
+    X = X[:1000]
+    target = target[:1000]
 
     alpha = alpha/float(batch_size)
 
@@ -159,9 +165,17 @@ def gradient_descent(network,train_data,valid_data,alpha,epochs,batch_size):
 
 #temp = test_data[1]
 #print (sum(temp == 0).astype(np.float32))
+
+
+#Load training, validation & testing data from MNIST dataset
+train_data, valid_data, test_data = mnist_loader.load_data_wrapper()
+
 my_net = Network([784, 30, 10])
-epochs = 50
+
+#hyper parameters
+epochs = 30
 alpha = 0.5
-batch_size = 100
+batch_size = 10
+
 gradient_descent(my_net,train_data,valid_data,alpha,epochs,batch_size)
 
